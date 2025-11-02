@@ -3,10 +3,6 @@ import { db } from "../config/firebase.js";
 
 const router = express.Router();
 
-/**
- * Rota GET para buscar agendamentos pendentes de uma unidade específica
- * Exemplo: /appointments/IFCO-CENTRAL
- */
 router.get("/:unit", async (req, res) => {
   const { unit } = req.params;
 
@@ -15,7 +11,7 @@ router.get("/:unit", async (req, res) => {
       .collection("unidades")
       .doc(unit)
       .collection("appointments")
-      .where("status", "==", "pendente")
+      .where("status", "in", ["em andamento","pendente"])
       .get();
 
     const appointments = snapshot.docs.map((doc) => ({
@@ -35,5 +31,22 @@ router.get("/:unit", async (req, res) => {
       });
   }
 });
+
+router.post("/updateStatus", async (req, res) => {
+  const {unit, id, status } = req.body;
+
+  if (!unit || !id || !status){
+    return res.status(400).json({ success: false, message: "Dados incompletos" });
+  }
+  try {
+    const docRef = db.collection("unidades").doc(unit).collection("appointments").doc(id);
+    await docRef.update({ status });
+
+    res.json({ success: true, message: "Status atualizado com sucesso" });
+  } catch (error) {
+    console.error("❌ Erro ao atualizar status:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+})
 
 export default router;
